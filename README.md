@@ -1,6 +1,4 @@
-# Bidiffy Platform
-
-Next generation offshore platform
+# FullStack TS App template
 
 ## Install the Frontend stack:
 
