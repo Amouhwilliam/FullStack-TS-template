@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  api:
+    container_name: api-container
+    image: node:14
+    working_dir: /usr/src/app
+    expose:
+      - 4000
+    ports:
+      - ${API_PORT}:4000
+    environment:
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_USER=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_PASS=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_DB=${MONGO_INITDB_DATABASE}
+      - AUTH_SECRET=${API_AUTH_SECRET}
+    links:
+      - mongo
+    depends_on:
+      - mongo
+    volumes:
+    - .:/usr/src/app
+    command: bash -c "yarn install && yarn start:dev"
+    labels:
+      - "traefik.http.routers.api.rule=Host(`api.app.localhost`)"
+
+  mongo:
+    container_name: mongo-container
+    image: mongo:4.4
+    ports:
+      - ${MONGO_PORT}:27017
+    volumes:
+      - mongo-database:/data/db
+    command: mongod --auth
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    labels:
+      - "traefik.http.routers.mongo.rule=Host(`mongo-db.app.localhost`)"
+
+  mongo-express:
+    container_name: mongo-express-service
+    image: mongo-express:0.54
+    restart: always
+    ports:
+      - ${MONGO_EXPRESS_PORT}:8081
+    links:
+      - mongo
+    depends_on:
+      - mongo
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    labels:
+      - "traefik.http.routers.mongo-express.rule=Host(`mongo-ui.app.localhost`)"
+
+  traefik:
+    container_name: traefik-container
+    image: traefik:v2.5
+    command: --api.insecure=true --providers.docker
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  mongo-database:

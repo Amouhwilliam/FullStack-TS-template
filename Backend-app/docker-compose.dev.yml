@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  dev-api:
+    container_name: dev-api-container
+    image: node:14
+    working_dir: /usr/src/app
+    expose:
+      - 4000
+    ports:
+      - ${API_PORT}:4000
+    environment:
+      - MONGO_HOST=dev-mongo
+      - MONGO_PORT=27017
+      - MONGO_USER=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_PASS=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_DB=${MONGO_INITDB_DATABASE}
+      - AUTH_SECRET=${API_AUTH_SECRET}
+    links:
+      - dev-mongo
+    depends_on:
+      - dev-mongo
+    volumes:
+    - .:/usr/src/app
+    command: bash -c "yarn install && yarn start:dev"
+
+  dev-mongo:
+    container_name: dev-mongo-container
+    image: mongo:4.4
+    ports:
+      - ${MONGO_PORT}:27017
+    volumes:
+      - dev-mongo-database:/data/db
+    command: mongod --auth
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+
+  dev-mongo-express:
+    container_name: dev-mongo-express-service
+    image: mongo-express:0.54
+    restart: always
+    ports:
+      - ${MONGO_EXPRESS_PORT}:8081
+    links:
+      - dev-mongo
+    depends_on:
+      - dev-mongo
+    environment:
+      ME_CONFIG_MONGODB_SERVER: dev-mongo
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+
+volumes:
+  dev-mongo-database:
